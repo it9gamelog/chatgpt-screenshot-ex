@@ -4,6 +4,8 @@ A Chrome extension that takes screenshot of a ChatGPT conversation (https://chat
 
 [Sample Screenshot](sample.png)
 
+![Screenshot](screenshot.png)
+
 # Usage
 
 Click the extension while chatting with the bot. An image of the whole conversation will then be saved.
