@@ -1,4 +1,4 @@
-(async (options) => {
+window.chatgptScreenshotEx = async (options) => {
     let counter = 50000; // prevent dead loop
 
     let selectedThread = null
@@ -31,7 +31,7 @@
             ) {
                 leftButton.click()
                 await new Promise(r => window.requestIdleCallback(r));
-            }            
+            }
             while (
                 extractThreadPosFromButton(leftButton) < selectedThread[level] &&
                 !rightButton.disabled &&
@@ -74,28 +74,31 @@
             return []
         }
         const buttons = line.querySelectorAll('button:not(.rounded-md):not(.p-1)')
-        if (buttons.length && !options?.selectedOnly) {
-            let leftButton = buttons[0]
-            let rightButton = buttons[1]
-            leftButton.closest("div").classList.add("chatgpt-screenshot-ex-button-box")
-            let threadCount = 0
-            let result = []
-            // Go to the left most thread
-            for (; !leftButton.disabled && counter-- > 0;) {
-                leftButton.click()
-                await new Promise(r => window.requestIdleCallback(r));
-            }
-            // Capturing all node along the way
-            result.push(await generateNode(line, selected && selectedThread[depth] == 0, depth + 1))
-            for (; !rightButton.disabled && counter-- > 0; threadCount++) {
-                rightButton.click()
-                await new Promise(r => window.requestIdleCallback(r));
-                result.push(await generateNode(line, selected && selectedThread[depth] == threadCount + 1, depth + 1))
-            }
-            // return result.sort((a, b) => b.selected - a.selected)
-            return result
-        } else {
+        if (!buttons.length || options?.selectedOnly) {
             return [await generateNode(line, selected, depth)]
+        }
+
+        let leftButton = buttons[0]
+        let rightButton = buttons[1]
+        leftButton.closest("div").classList.add("chatgpt-screenshot-ex-button-box")
+        let threadCount = 0
+        let result = []
+        // Go to the left most thread
+        for (; !leftButton.disabled && counter-- > 0;) {
+            leftButton.click()
+            await new Promise(r => window.requestIdleCallback(r));
+        }
+        // Capturing all node along the way
+        result.push(await generateNode(line, selected && selectedThread[depth] == 0, depth + 1))
+        for (; !rightButton.disabled && counter-- > 0; threadCount++) {
+            rightButton.click()
+            await new Promise(r => window.requestIdleCallback(r));
+            result.push(await generateNode(line, selected && selectedThread[depth] == threadCount + 1, depth + 1))
+        }
+        if (options?.flattern) {
+            return result.sort((a, b) => b.selected - a.selected)
+        } else {
+            return result
         }
     }
 
@@ -106,11 +109,13 @@
         colorIndex = (colorIndex + 1) % colorPalette.length
         return colorPalette[colorIndex]
     }
+    const prevColor = () => {
+        colorIndex = (colorIndex + colorPalette.length - 1) % colorPalette.length
+    }
 
     let lastIndicatorBox = null
     let lastIndicator = null
-
-    const regenerateConversationTree = (content, conversation, threadBegin) => {
+    const regenerateTree = (content, conversation, threadBegin) => {
         let indicatorBox = document.createElement("div")
 
         if (conversation.node) {
@@ -119,10 +124,6 @@
             if (conversation.selected) {
                 indicatorBox.classList.add("chatgpt-screenshot-ex-indicator-box-selected")
             }
-
-            console.log(`${conversation.depth} (${threadBegin}) > ${conversation.text}`)
-            conversation.node.classList.add("chatgpt-screenshot-ex-node")
-
             conversation.node.insertBefore(indicatorBox, conversation.node.firstChild)
             for (color of currentPalette) {
                 let indicator = document.createElement("div")
@@ -138,6 +139,8 @@
                 lastIndicator.classList.add("chatgpt-screenshot-ex-indicator-break")
             }
 
+            console.log(`${conversation.depth} (${threadBegin}) > ${conversation.text}`)
+            conversation.node.classList.add("chatgpt-screenshot-ex-node")
             content.appendChild(conversation.node)
         }
         threadBegin = 0
@@ -147,12 +150,12 @@
             currentPalette.push(nextColor())
         }
         let times = 0;
-        for (let children of conversation.children) {
+        for (let child of conversation.children) {
             if (times++ > 0 && conversation.children.length > 1) {
                 console.debug(`break of ${conversation.depth}`)
                 threadBegin = 2
             }
-            regenerateConversationTree(content, children, threadBegin)
+            regenerateTree(content, child, threadBegin)
         }
         if (conversation.children.length > 1) {
             console.debug(`end of ${conversation.depth}`)
@@ -160,6 +163,65 @@
             if (lastIndicatorBox) {
                 lastIndicatorBox.childNodes[conversation.depth].classList.add("chatgpt-screenshot-ex-indicator-end")
             }
+        }
+    }
+
+    const walkDive = Symbol('Dive')
+    const walkDiveOnly = Symbol('DiveOnly')
+    const walkSurfaceOnly = Symbol('SurfaceOnly')
+    let xDepth = 0
+    const regenerateFlattern = (content, conversation, begin, walk) => {
+        if (conversation.node && walk != walkDiveOnly) {
+            let indicatorBox = document.createElement("div")
+            lastIndicatorBox = indicatorBox
+            indicatorBox.classList.add("chatgpt-screenshot-ex-indicator-box")
+            if (conversation.selected) {
+                indicatorBox.classList.add("chatgpt-screenshot-ex-indicator-box-selected")
+            }
+            conversation.node.insertBefore(indicatorBox, conversation.node.firstChild)
+            for (color of currentPalette) {
+                let indicator = document.createElement("div")
+                lastIndicator = indicator
+                indicator.style.borderColor = color
+                indicator.classList.add("chatgpt-screenshot-ex-indicator")
+                indicatorBox.appendChild(indicator)
+            }
+            if (begin) {
+                lastIndicator.classList.add("chatgpt-screenshot-ex-indicator-begin")
+            }
+
+            console.log(`${xDepth} > ${conversation.text}`)
+            content.appendChild(conversation.node)
+            conversation.node.classList.add("chatgpt-screenshot-ex-node")
+        }
+
+        if (walk == walkSurfaceOnly) return
+
+        if (conversation.children.length > 0 && conversation.children[0].selected) {
+            regenerateFlattern(content, conversation.children[0], false, walkSurfaceOnly)
+
+            if (conversation.children[0].children.length > 0 && conversation.children[0].children[0].selected) {
+                regenerateFlattern(content, conversation.children[0].children[0], false, walkSurfaceOnly)
+            }
+        }
+
+        for (let child of conversation.children) {
+            if (child.selected) continue
+            if (child.depth != conversation.depth) {
+                currentPalette.push(nextColor())
+                xDepth++
+            }
+            regenerateFlattern(content, child, child.depth != conversation.depth, walkDive)
+            if (child.depth != conversation.depth) {
+                lastIndicatorBox.childNodes[--xDepth].classList.add("chatgpt-screenshot-ex-indicator-end")
+                currentPalette.pop()
+                // prevColor()
+            }
+        }
+
+        if (conversation.children.length > 0 &&
+            conversation.children[0].children.length > 0 && conversation.children[0].children[0].selected) {
+            regenerateFlattern(content, conversation.children[0].children[0], false, walkDiveOnly)
         }
     }
 
@@ -255,7 +317,11 @@
         const rootNodes = await explore(firstNode, 0, true)
         let root = new ConversationNode(null, rootNodes, 0, true)
 
-        regenerateConversationTree(content, root)
+        if (options?.flattern) {
+            regenerateFlattern(content, root, false, walkDiveOnly)
+        } else {
+            regenerateTree(content, root)
+        }
         await new Promise(r => window.requestIdleCallback(r));
 
         const baseName = `chatgpt.${new Date().toISOString()}`
@@ -270,4 +336,4 @@
     }
 
     return addStyle(work)
-})({ selectedOnly: true });
+}

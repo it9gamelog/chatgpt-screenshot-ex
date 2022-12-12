@@ -1,0 +1,35 @@
+<html>
+<head>
+  <style>
+    body {
+      width: 25rem;
+      font-size: 100%;
+      display: grid;
+      place-content: center;
+    }
+    #invalidTab {
+      margin: 1rem;
+      padding: 0.5rem;
+      background: #ddd;
+      border-radius: 5px;
+      text-align: center;
+    }
+    button {
+      border-radius: 5px;
+      padding: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="invalidTab">
+    Use in https://chat.openai.com only
+  </div>
+  <div id="validTab" style="display: none">
+    <button id="only">Capture Selected Thread Only</button>
+    <button id="full">Capture All Threads</button>
+  </div>
+  <script src="popup.js"></script>
+
+</body>
+
+</html>
