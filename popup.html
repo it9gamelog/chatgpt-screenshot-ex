@@ -1,4 +1,5 @@
 <html>
+
 <head>
   <style>
     body {
@@ -6,7 +7,9 @@
       font-size: 100%;
       display: grid;
       place-content: center;
+      margin: 1rem;
     }
+
     #invalidTab {
       margin: 1rem;
       padding: 0.5rem;
@@ -14,22 +17,38 @@
       border-radius: 5px;
       text-align: center;
     }
+
     button {
       border-radius: 5px;
       padding: 0.5rem;
     }
+
+    h2 {
+      color: gray;
+      font-size: 1rem;
+      border-bottom: 1px solid gray;
+    }
+
+    ul {
+      padding-left: 0;
+    }
   </style>
 </head>
+
 <body>
   <div id="invalidTab">
     Use in https://chat.openai.com only
   </div>
   <div id="validTab" style="display: none">
-    <button id="only">Capture Selected Thread Only</button>
-    <button id="full">Capture All Threads</button>
+    <h2>Capture</h2>
+    <button id="only">Visible Only</button>
+    <button id="full">All Edit History</button>
+    <h2>Options (<a href="https://github.com/it9gamelog/chatgpt-screenshot-ex" target="_blank">Help</a>)</h2>
+    <ul>
+      <li><label for="maximumHeight">Output height limit (0 for none)</label> <input type="number" id="maximumHeight" min="0" max="100000" step="1"></li>
+    </ul>
   </div>
   <script src="popup.js"></script>
-
 </body>
 
 </html>

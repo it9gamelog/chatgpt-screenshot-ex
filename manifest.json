@@ -19,7 +19,7 @@
             "128": "images/icon-128.png"
         }
     },
-    "permissions": ["scripting"],
+    "permissions": ["scripting", "storage"],
     "host_permissions": [
         "https://chat.openai.com/"
     ]

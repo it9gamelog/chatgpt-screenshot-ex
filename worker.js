@@ -248,13 +248,16 @@ window.chatgptScreenshotEx = async (options) => {
         .chatgpt-screenshot-ex-background > div {
             display: none;
         }
-        .chatgpt-screenshot-ex-background > div.chatgpt-screenshot-ex-node {
+        div.chatgpt-screenshot-ex-node {
             display: grid;
             grid-template: auto / min-content 1fr;            
             gap: 0.5rem;            /* gives some padding for nicer output */
             padding-left: 0.2rem;
             padding-right: 0.5rem;
             border: none;
+        }        
+        div.chatgpt-screenshot-ex-node.hidden {
+            display: none
         }
 
         /* The thread indicator container */
@@ -295,10 +298,18 @@ window.chatgptScreenshotEx = async (options) => {
             return await callback()
         } catch (e) {
             console.error(e)
-            throw(e)
+            throw (e)
         } finally {
             document.head.removeChild(styleSheet)
         }
+    }
+
+    let screenshotCount = 0
+    const makeScreenshot = async (root) => {
+        const baseName = `chatgpt.${new Date().toISOString()}`
+        screenshotCount++
+        const blob = await domtoimage.toBlob(root, { filter: (node) => node?.tagName?.toLowerCase() != 'img' })
+        window.saveAs(blob, `${baseName}.${(screenshotCount + '').padStart(3, '0')}.png`)
     }
 
     const work = async () => {
@@ -326,11 +337,27 @@ window.chatgptScreenshotEx = async (options) => {
             regenerateTree(content, root)
         }
 
-        await new Promise(r => window.requestIdleCallback(r));
+        let nodes = content.querySelectorAll(".chatgpt-screenshot-ex-node")
 
-        const baseName = `chatgpt.${new Date().toISOString()}`
-        const blob = await domtoimage.toBlob(content, { filter: (node) => node?.tagName?.toLowerCase() != 'img' })
-        window.saveAs(blob, `${baseName}.png`)
+        if (options.maximumHeight) {
+            for (let node of nodes) {
+                node.classList.add('hidden')
+            }
+            for (let i = 0, j = 0; j < nodes.length; j++) {
+                nodes[j].classList.remove('hidden')
+                await new Promise(r => window.requestIdleCallback(r));
+                if (j > i && content.offsetHeight > options.maximumHeight) {
+                    nodes[j].classList.add('hidden')
+                    await new Promise(r => window.requestIdleCallback(r));
+                    j--
+                    await makeScreenshot(content)
+                    for (; i <= j; i++) {
+                        nodes[i].classList.add('hidden')
+                    }
+                }
+            }
+        }
+        await makeScreenshot(content)
 
         for (let node of content.querySelectorAll(".chatgpt-screenshot-ex-node")) {
             node.remove()
