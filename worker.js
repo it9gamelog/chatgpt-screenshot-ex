@@ -215,7 +215,7 @@ window.chatgptScreenshotEx = async (options) => {
             if (child.depth != conversation.depth) {
                 lastIndicatorBox.childNodes[--xDepth].classList.add("chatgpt-screenshot-ex-indicator-end")
                 currentPalette.pop()
-                // prevColor()
+                prevColor()
             }
         }
 
@@ -293,6 +293,9 @@ window.chatgptScreenshotEx = async (options) => {
 
         try {
             return await callback()
+        } catch (e) {
+            console.error(e)
+            throw(e)
         } finally {
             document.head.removeChild(styleSheet)
         }
@@ -322,6 +325,7 @@ window.chatgptScreenshotEx = async (options) => {
         } else {
             regenerateTree(content, root)
         }
+
         await new Promise(r => window.requestIdleCallback(r));
 
         const baseName = `chatgpt.${new Date().toISOString()}`
