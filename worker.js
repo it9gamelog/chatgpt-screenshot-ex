@@ -200,14 +200,6 @@ window.chatgptScreenshotEx = async (options) => {
 
         if (walk == walkSurfaceOnly) return
 
-        if (conversation.children.length > 0 && conversation.children[0].selected) {
-            regenerateFlattern(content, conversation.children[0], false, walkSurfaceOnly)
-
-            if (conversation.children[0].children.length > 0 && conversation.children[0].children[0].selected) {
-                regenerateFlattern(content, conversation.children[0].children[0], false, walkSurfaceOnly)
-            }
-        }
-
         for (let child of conversation.children) {
             if (child.selected) continue
             if (child.depth != conversation.depth) {
@@ -221,10 +213,9 @@ window.chatgptScreenshotEx = async (options) => {
                 prevColor()
             }
         }
-
-        if (conversation.children.length > 0 &&
-            conversation.children[0].children.length > 0 && conversation.children[0].children[0].selected) {
-            regenerateFlattern(content, conversation.children[0].children[0], false, walkDiveOnly)
+        
+        if (conversation.children.length > 0 && conversation.children[0].selected) {
+            regenerateFlattern(content, conversation.children[0], false, walkDive)
         }
     }
 
@@ -311,6 +302,11 @@ window.chatgptScreenshotEx = async (options) => {
         }
         .chatgpt-screenshot-ex-background .self-end {
             display: none;          /* remove the thumb-up/down */
+        }
+
+        /* Remove prompt bar while previewing */
+        div.absolute.bottom-0 {
+            display: none;
         }
         `
         var styleSheet = document.createElement("style")
