@@ -47,6 +47,9 @@ window.chatgptScreenshotEx = async (options) => {
             this.node = node
             if (node) {
                 this.text = node.innerText.substring(0, 50) // for debug
+                node.addEventListener('click', (e) => {
+                    node.classList.toggle('skip-capture')
+                })
             }
             this.children = children
             this.depth = depth
@@ -225,8 +228,15 @@ window.chatgptScreenshotEx = async (options) => {
         }
     }
 
-    const addStyle = async (callback) => {
+    const addStyle = () => {
         var styles = `
+        button#chatgpt-screenshot-ex-shutter {
+            position: fixed;
+            top: 0.5rem;
+            right: 1rem;
+            z-index: 1000;
+        }
+
         /* The thread indicator */
         .chatgpt-screenshot-ex-indicator {
             border-color: red;
@@ -257,7 +267,20 @@ window.chatgptScreenshotEx = async (options) => {
             border: none;
         }        
         div.chatgpt-screenshot-ex-node.hidden {
-            display: none
+            display: none;
+        }
+        
+        div.chatgpt-screenshot-ex-node:hover, div.chatgpt-screenshot-ex-node.skip-capture {
+            background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAAGXRFWHRTb2Z0d2FyZQB3d3cuaW5rc2NhcGUub3Jnm+48GgAAAPdJREFUOI2Vk8FOwkAURc+bKulsUP/EREm6xhASPwUjH8PCfyESt3YhSf8EYTPFOH0upBLbzlDeZlbnTN59ueLsk4LmqUum6GJHn5H5sLR+CZIZ0BwkK61fIvPhOTBoblKXTGvJ3urb9np20wcWZL0f6KNBF7taouhd+pW8dkoacDnwk6vPl40BOCkJwACiqvFfthc+BLcFLQlFJfotKvddcLfgKFmBjABEKMrLatyEAUww8d9w/j1d0xYcVxgJUgAfCreh65gAfAisGqfOPMRObMLwIbATJzZR+C+KsESU5zgcXdFPxNnZe12MXo1sluksuLEOSPYDLkDokX7h5yoAAAAASUVORK5CYII=');
+            cursor: pointer;
+        }
+
+        div.chatgpt-screenshot-ex-node.skip-capture {
+            filter: grayscale(0.7);
+        }
+
+        div.chatgpt-screenshot-ex-node.skip-capture:hover {
+            filter: grayscale(0.25);
         }
 
         /* The thread indicator container */
@@ -291,17 +314,9 @@ window.chatgptScreenshotEx = async (options) => {
         }
         `
         var styleSheet = document.createElement("style")
+        styleSheet.dataset.tag = "chatgpt-screenshot-ex"
         styleSheet.innerHTML = styles
         document.head.appendChild(styleSheet)
-
-        try {
-            return await callback()
-        } catch (e) {
-            console.error(e)
-            throw (e)
-        } finally {
-            document.head.removeChild(styleSheet)
-        }
     }
 
     let screenshotCount = 0
@@ -312,33 +327,12 @@ window.chatgptScreenshotEx = async (options) => {
         window.saveAs(blob, `${baseName}.${(screenshotCount + '').padStart(3, '0')}.png`)
     }
 
-    const work = async () => {
-        const content = document.querySelector("main div.flex")
-        content.classList.add("chatgpt-screenshot-ex-background");
-
-        const firstNode = content.querySelector(".border-b")
-        if (!firstNode) {
-            return
-        }
-
-        /* for safety */
-        for (let node of content.querySelectorAll(".chatgpt-screenshot-ex-node")) {
+    const workCapture = async (content) => {
+        for (let node of content.querySelectorAll(".skip-capture")) {
             node.remove()
         }
 
-        preserveSelectedThread(content)
-
-        const rootNodes = await explore(firstNode, 0, true)
-        let root = new ConversationNode(null, rootNodes, 0, true)
-
-        if (options?.flattern) {
-            regenerateFlattern(content, root, false, walkDiveOnly)
-        } else {
-            regenerateTree(content, root)
-        }
-
         let nodes = content.querySelectorAll(".chatgpt-screenshot-ex-node")
-
         if (options.maximumHeight) {
             for (let node of nodes) {
                 node.classList.add('hidden')
@@ -366,5 +360,76 @@ window.chatgptScreenshotEx = async (options) => {
         await restoreSelectedThread(content)
     }
 
-    return addStyle(work)
+    const workConstruct = async (content) => {
+        content.classList.add("chatgpt-screenshot-ex-background");
+
+        const firstNode = content.querySelector(".border-b")
+        if (!firstNode) {
+            return
+        }
+
+        preserveSelectedThread(content)
+
+        const rootNodes = await explore(firstNode, 0, true)
+        let root = new ConversationNode(null, rootNodes, 0, true)
+
+        if (options?.flattern) {
+            regenerateFlattern(content, root, false, walkDiveOnly)
+        } else {
+            regenerateTree(content, root)
+        }
+    }
+
+    const cleanup = () => {
+        // Style, and Preview Button
+        for (let node of document.querySelectorAll('*[data-tag="chatgpt-screenshot-ex"]')) {
+            node.remove()
+        }
+        for (let node of document.querySelectorAll(".chatgpt-screenshot-ex-node")) {
+            node.remove()
+        }
+    }
+
+    const insertShutterButton = (content) => {
+        let button = document.createElement("button")
+        button.dataset.tag = "chatgpt-screenshot-ex"
+        button.classList.add("btn", "flex", "gap-2", "justify-center", "btn-primary")
+        button.id = "chatgpt-screenshot-ex-shutter"
+        button.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+        </svg>
+        Take screenshot`
+        button.addEventListener('click', async () => {
+            try {
+                await workCapture(content)
+            } catch (e) {
+                console.error(e)
+                throw (e)
+            } finally {
+                cleanup()
+            }
+        })
+        content.append(button)
+    }
+
+    return await (async () => {
+        const content = document.querySelector("main div.flex")
+        try {
+            cleanup()
+            addStyle()
+            await workConstruct(content)
+            if (options.preview) {
+                insertShutterButton(content)
+            } else {
+                await workCapture(content)
+                cleanup()
+            }
+        } catch (e) {
+            console.error(e)
+            cleanup()
+            throw (e)
+        }
+    })()
 }

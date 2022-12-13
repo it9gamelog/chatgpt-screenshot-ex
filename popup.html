@@ -21,6 +21,7 @@
     button {
       border-radius: 5px;
       padding: 0.5rem;
+      cursor: pointer;
     }
 
     h2 {
@@ -40,12 +41,13 @@
     Use in https://chat.openai.com only
   </div>
   <div id="validTab" style="display: none">
-    <h2>Capture</h2>
+    <h2>Take Screenshot</h2>
     <button id="only">Visible Only</button>
     <button id="full">All Edit History</button>
     <h2>Options (<a href="https://github.com/it9gamelog/chatgpt-screenshot-ex" target="_blank">Help</a>)</h2>
     <ul>
       <li><label for="maximumHeight">Output height limit (0 for none)</label> <input type="number" id="maximumHeight" min="0" max="100000" step="1"></li>
+      <li><label for="preview">Preview/edit before save</label> <input type="checkbox" id="preview"></li>
     </ul>
   </div>
   <script src="popup.js"></script>
