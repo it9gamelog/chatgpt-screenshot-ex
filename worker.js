@@ -213,7 +213,7 @@ window.chatgptScreenshotEx = async (options) => {
                 prevColor()
             }
         }
-        
+
         if (conversation.children.length > 0 && conversation.children[0].selected) {
             regenerateFlattern(content, conversation.children[0], false, walkDive)
         }
@@ -221,11 +221,13 @@ window.chatgptScreenshotEx = async (options) => {
 
     const addStyle = () => {
         var styles = `
-        button#chatgpt-screenshot-ex-shutter {
+        #chatgpt-screenshot-ex-edit-buttons {
+            display: flex;
             position: fixed;
             top: 0.5rem;
             right: 1rem;
             z-index: 1000;
+            gap: 1rem;
         }
 
         /* The thread indicator */
@@ -386,28 +388,45 @@ window.chatgptScreenshotEx = async (options) => {
         }
     }
 
-    const insertShutterButton = (content) => {
-        let button = document.createElement("button")
-        button.dataset.tag = "chatgpt-screenshot-ex"
-        button.classList.add("btn", "flex", "gap-2", "justify-center", "btn-primary")
-        button.id = "chatgpt-screenshot-ex-shutter"
-        button.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-        </svg>
-        Take screenshot`
-        button.addEventListener('click', async () => {
-            try {
-                await workCapture(content)
-            } catch (e) {
-                console.error(e)
-                throw (e)
-            } finally {
-                cleanup()
-            }
-        })
-        content.append(button)
+    const insertEditButtons = (content) => {
+        let area = document.createElement("div")
+        area.dataset.tag = "chatgpt-screenshot-ex"
+        area.id = "chatgpt-screenshot-ex-edit-buttons"
+        area.classList.add("flex")
+        content.append(area)
+
+        {
+            let button = document.createElement("button")
+            button.classList.add("btn", "flex", "gap-2", "justify-center", "btn-secondary")
+            button.innerHTML = `Reverse Selections`
+            button.addEventListener('click', async () => {
+                for (let node of document.querySelectorAll(".chatgpt-screenshot-ex-node")) {
+                    node.classList.toggle('skip-capture')
+                }
+            })
+            area.append(button)
+        }
+        {
+            let button = document.createElement("button")
+            button.classList.add("btn", "flex", "gap-2", "justify-center", "btn-primary")
+            button.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+            </svg>
+            Take screenshot`
+            button.addEventListener('click', async () => {
+                try {
+                    await workCapture(content)
+                } catch (e) {
+                    console.error(e)
+                    throw (e)
+                } finally {
+                    cleanup()
+                }
+            })
+            area.append(button)
+        }
     }
 
     return await (async () => {
@@ -417,7 +436,7 @@ window.chatgptScreenshotEx = async (options) => {
             addStyle()
             await workConstruct(content)
             if (options.preview) {
-                insertShutterButton(content)
+                insertEditButtons(content)
             } else {
                 await workCapture(content)
                 cleanup()

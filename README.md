@@ -37,6 +37,8 @@ Once the preview mode is checked, click any of the `Take Screenshot` button, to 
 
 Click any of the line to cross out them. Click again to undo. Crossed lines will not be included.
 
+Click `Reverse Selections` to quickly toggle the skipping status for all lines.
+
 Click the `Take Screenshot` button on the upper right to compose the final screenshots.
 
 # Limitation
