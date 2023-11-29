@@ -1,5 +1,17 @@
 window.chatgptScreenshotEx = async (options) => {
+    // Select the main content area
+    const ContentSelector = 'main div[role=presentation] div.flex'        
+    // Select all thread selection left/right buttons and only those buttons within the Content
+    // Such as those in "< 1/2 >"
+    //   .rounded-md and .p-1 excludes copy, like, edit, regenerate buttons
+    //   .btn excludes the link sharing buttons on top right
+    const ThreadButtonsSelector = 'button:not(.rounded-md):not(.p-1):not(.btn)'
+    // Select all conversation lines within the Content
+    const ConversationNodeSelector = '.text-token-text-primary'
+
     let counter = 50000; // prevent dead loop
+
+    const nextTick = () => new Promise(r => window.requestIdleCallback(r));
 
     let selectedThread = null
     const extractThreadPosFromButton = (button) => {
@@ -11,17 +23,21 @@ window.chatgptScreenshotEx = async (options) => {
         return 0
     }
 
+    // Chats could have different branches, and we are building a tree of the whole conversation
+    // preserveSelectedThread preserve the current selected path
     const preserveSelectedThread = (content) => {
         selectedThread = []
-        const buttons = content.querySelectorAll('button:not(.rounded-md):not(.p-1)')
+        const buttons = content.querySelectorAll(ThreadButtonsSelector)
         for (let i = 0; i < buttons.length; i += 2) {
             selectedThread.push(extractThreadPosFromButton(buttons[i]))
         }
     }
 
+    // restoreSelectedThread restore the captured, preserved selected path
+    //   by visiting all the thread selection buttons, and clicking left/right accordingly
     const restoreSelectedThread = async (content) => {
         for (let level = 0; level < selectedThread.length; level++) {
-            const buttons = content.querySelectorAll('button:not(.rounded-md):not(.p-1)')
+            const buttons = content.querySelectorAll(ThreadButtonsSelector)
             let leftButton = buttons[level * 2]
             let rightButton = buttons[level * 2 + 1]
             while (
@@ -30,7 +46,7 @@ window.chatgptScreenshotEx = async (options) => {
                 counter-- > 0
             ) {
                 leftButton.click()
-                await new Promise(r => window.requestIdleCallback(r));
+                await nextTick()
             }
             while (
                 extractThreadPosFromButton(leftButton) < selectedThread[level] &&
@@ -38,7 +54,7 @@ window.chatgptScreenshotEx = async (options) => {
                 counter-- > 0
             ) {
                 rightButton.click()
-                await new Promise(r => window.requestIdleCallback(r));
+                await nextTick()
             }
         }
     }
@@ -57,10 +73,11 @@ window.chatgptScreenshotEx = async (options) => {
         }
     }
 
+    // generateNode is to generate ConversationNode from the conversation in recursive manner
     const generateNode = async (line, selected, depth) => {
         let parent = line.parentElement
         let index = [].slice.call(parent.children).indexOf(line) + 1
-        let nextLine = parent.querySelector(":nth-child(" + index + ") ~ .border-b");
+        let nextLine = parent.querySelector(":nth-child(" + index + ") ~ " + ConversationNodeSelector);
         if (nextLine) {
             return new ConversationNode(line.cloneNode(true), await explore(nextLine, depth, selected), depth, selected)
         }
@@ -76,7 +93,8 @@ window.chatgptScreenshotEx = async (options) => {
             console.error("Dead loop! We shouldn't be here ever.")
             return []
         }
-        const buttons = line.querySelectorAll('button:not(.rounded-md):not(.p-1)')
+
+        const buttons = line.querySelectorAll(ThreadButtonsSelector)
         if (!buttons.length || options?.selectedOnly) {
             return [await generateNode(line, selected, depth)]
         }
@@ -89,13 +107,13 @@ window.chatgptScreenshotEx = async (options) => {
         // Go to the left most thread
         for (; !leftButton.disabled && counter-- > 0;) {
             leftButton.click()
-            await new Promise(r => window.requestIdleCallback(r));
+            await nextTick()
         }
         // Capturing all node along the way
         result.push(await generateNode(line, selected && selectedThread[depth] == 0, depth + 1))
         for (; !rightButton.disabled && counter-- > 0; threadCount++) {
             rightButton.click()
-            await new Promise(r => window.requestIdleCallback(r));
+            await nextTick()
             result.push(await generateNode(line, selected && selectedThread[depth] == threadCount + 1, depth + 1))
         }
         if (options?.flattern) {
@@ -337,10 +355,10 @@ window.chatgptScreenshotEx = async (options) => {
             }
             for (let i = 0, j = 0; j < nodes.length; j++) {
                 nodes[j].classList.remove('hidden')
-                await new Promise(r => window.requestIdleCallback(r));
+                await nextTick()
                 if (j > i && content.offsetHeight > options.maximumHeight) {
                     nodes[j].classList.add('hidden')
-                    await new Promise(r => window.requestIdleCallback(r));
+                    await nextTick()
                     j--
                     await makeScreenshot(content)
                     for (; i <= j; i++) {
@@ -361,16 +379,18 @@ window.chatgptScreenshotEx = async (options) => {
     const workConstruct = async (content) => {
         content.classList.add("chatgpt-screenshot-ex-background");
 
-        const firstNode = content.querySelector(".border-b")
+        const firstNode = content.querySelector(ConversationNodeSelector)
         if (!firstNode) {
             return
         }
 
         preserveSelectedThread(content)
 
+        // Capture the conversation into ConversationNode, our own data format
         const rootNodes = await explore(firstNode, 0, true)
         let root = new ConversationNode(null, rootNodes, 0, true)
 
+        // Recreate a new presentation DOM from the ConversationNode, and apply our style
         if (options?.flattern) {
             regenerateFlattern(content, root, false, walkDiveOnly)
         } else {
@@ -397,7 +417,16 @@ window.chatgptScreenshotEx = async (options) => {
 
         {
             let button = document.createElement("button")
-            button.classList.add("btn", "flex", "gap-2", "justify-center", "btn-secondary")
+            button.classList.add("btn", "flex", "gap-2", "justify-center", "btn-neutral", "text-red-500")
+            button.innerHTML = `Cancel`
+            button.addEventListener('click', async () => {
+                cleanup()
+            })
+            area.append(button)
+        }
+        {
+            let button = document.createElement("button")
+            button.classList.add("btn", "flex", "gap-2", "justify-center", "btn-neutral")
             button.innerHTML = `Reverse Selections`
             button.addEventListener('click', async () => {
                 for (let node of document.querySelectorAll(".chatgpt-screenshot-ex-node")) {
@@ -430,7 +459,7 @@ window.chatgptScreenshotEx = async (options) => {
     }
 
     return await (async () => {
-        const content = document.querySelector("main div.flex")
+        const content = document.querySelector(ContentSelector)
         try {
             cleanup()
             addStyle()

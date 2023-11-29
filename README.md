@@ -2,6 +2,8 @@
 
 A Chrome extension that takes screenshot of a ChatGPT conversation (https://chat.openai.com/). It can capture all hidden conversation branches and split long image.
 
+Tested on version November 21, 2023.
+
 # Sample Output and Screenshot
 
 [Sample Screenshot](images/docs/sample.png)
