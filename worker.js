@@ -238,7 +238,7 @@ window.chatgptScreenshotEx = async (options) => {
     }
 
     const addStyle = () => {
-        var styles = `
+        const styles = `
         #chatgpt-screenshot-ex-edit-buttons {
             display: flex;
             position: fixed;
@@ -308,6 +308,10 @@ window.chatgptScreenshotEx = async (options) => {
             grid-column: 2 / span 1;
             margin: inherit;
         }
+        /* Hide go to the bottom button */
+        button.cursor-pointer {
+            display: none;
+        }
         /* Hide the thread selection */
         .chatgpt-screenshot-ex-button-box {
             display: none;
@@ -315,7 +319,7 @@ window.chatgptScreenshotEx = async (options) => {
         .chatgpt-screenshot-ex-background {
             background: white;      /* instead of being transparent... */
             height: initial;        /* get rid of the bottom margin */
-            max-width: 37rem;       /* constrain the width, even on larger screen */
+            max-width: 50rem;       /* constrain the width, even on larger screen */
         }
         .chatgpt-screenshot-ex-background div.h-48.flex-shrink-0 {
             display: none;          /* get rid of the bottom margin reserved for the prompt input  */
@@ -328,8 +332,31 @@ window.chatgptScreenshotEx = async (options) => {
         div.absolute.bottom-0 {
             display: none;
         }
+        
+        /**** Presentation fix ****/
+        /* Override the hardcoded width to reduce right margin*/
+        div.chatgpt-screenshot-ex-node div.flex div.relative.w-full {
+            width: calc(100% - 4rem);
+        }
+
+        /* Prevent the code box from overflowing and distorting the layout */
+        div.chatgpt-screenshot-ex-node pre, div.chatgpt-screenshot-ex-node div {
+            overflow: hidden !important;            
+        }
+
+        /* Counter cannot be rendered. Revert to default <li> style instead */
+        div.chatgpt-screenshot-ex-node .markdown ol {
+            list-style-type: decimal;
+            padding-left: 1.625em;
+        }
+        div.chatgpt-screenshot-ex-node .markdown ol>li {
+            display: list-item;
+        }
+        div.chatgpt-screenshot-ex-node .markdown ol>li::before {
+            content: "";
+        }
         `
-        var styleSheet = document.createElement("style")
+        const styleSheet = document.createElement("style")
         styleSheet.dataset.tag = "chatgpt-screenshot-ex"
         styleSheet.innerHTML = styles
         document.head.appendChild(styleSheet)
