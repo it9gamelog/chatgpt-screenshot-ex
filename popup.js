@@ -4,7 +4,7 @@ var handler = async (options) => {
     saveSettings()
     await chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        files: ["dom-to-image.min.js", "FileSaver.min.js", "worker.js"]
+        files: ["dom-to-image-more.min.js", "FileSaver.min.js", "worker.js"]
     });
     options.maximumHeight = Number(document.querySelector("#maximumHeight").value)
     options.preview = document.querySelector("#preview").checked

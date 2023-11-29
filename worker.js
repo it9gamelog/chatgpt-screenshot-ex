@@ -339,7 +339,7 @@ window.chatgptScreenshotEx = async (options) => {
     const makeScreenshot = async (root) => {
         const baseName = `chatgpt.${new Date().toISOString()}`
         screenshotCount++
-        const blob = await domtoimage.toBlob(root, { filter: (node) => node?.tagName?.toLowerCase() != 'img' })
+        const blob = await domtoimage.toBlob(root, { filter: (node) => node?.tagName?.toLowerCase() != 'img', copyDefaultStyles: false })
         window.saveAs(blob, `${baseName}.${(screenshotCount + '').padStart(3, '0')}.png`)
     }
 

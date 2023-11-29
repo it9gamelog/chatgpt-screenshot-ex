@@ -49,5 +49,5 @@ Click the `Take Screenshot` button on the upper right to compose the final scree
 
 # Dependency
 
-* https://github.com/tsayen/dom-to-image (License: MIT)
+* https://github.com/1904labs/dom-to-image-more (License: MIT)
 * https://github.com/eligrey/FileSaver.js/ (License: MIT)
